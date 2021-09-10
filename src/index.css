@@ -1,0 +1,20 @@
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+svg {
+  border: 1px solid #ccc;
+}
+
+text {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.axis .domain {
+  stroke: none;
+}
+
+.y .tick text {
+  font-size: 1rem;
+}

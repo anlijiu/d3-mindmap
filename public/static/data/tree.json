@@ -1,0 +1,75 @@
+{
+  "name": "Root",
+  "children": [
+    {
+      "name": "Branch 1"
+    },
+    {
+      "name": "Branch 2",
+      "children": [
+        {
+          "name": "Branch 2.1"
+        },
+        {
+          "name": "Branch 2.2",
+          "children": [
+            {
+              "name": "Branch 2.2.1"
+            },
+            {
+              "name": "Branch 2.2.2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Branch 3"
+    },
+    {
+      "name": "Branch 4",
+      "children": [
+        {
+          "name": "Branch 4.1"
+        },
+        {
+          "name": "Branch 4.2"
+        }
+      ]
+    },
+    {
+      "name": "Branch 5"
+    },
+    {
+      "name": "Branch 6"
+    },
+    {
+      "name": "Branch 7",
+      "children": [
+        {
+          "name": "Branch 7.1"
+        },
+        {
+          "name": "Branch 7.2",
+          "children": [
+            {
+              "name": "Branch 7.2.1"
+            },
+            {
+              "name": "Branch 7.2.2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Branch 8-"
+    },
+    {
+      "name": "Branch 9"
+    },
+    {
+      "name": "Branch 10"
+    }
+  ]
+}
