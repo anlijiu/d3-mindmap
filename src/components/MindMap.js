@@ -3,7 +3,6 @@ import { select } from 'd3-selection'
 import { scaleLinear, scaleBand } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { tree, hierarchy } from 'd3-hierarchy';
-// import { flextree } from 'd3-flextree';
 import flextree from './flextree';
 import BezierModule from '../bezier';
 const { Bezier } = BezierModule;
@@ -129,49 +128,34 @@ const MindMap = ({ data }) => {
         height = +svg.attr("height")
 
     // Shift the entire tree by half it's width
-    var g = svg.append("g").attr("transform", "scale(0.8 1)\ntranslate(" + width / 1.6 + "," + 0 + ")");
+    var g = svg.append("g").attr("transform", "scale(0.8 1)\ntranslate(" + width / 1.6 + "," + height / 2 + ")");
 
-    // Create new default tree layout
-    var t = tree()
-      .separation((a, b) => 8.1)
-    // Set the size
-    // Remember the tree is rotated
-    // so the height is used as the width
-    // and the width as the height
-      .size([height, SWITCH_CONST * (width - 150) / 2])
+    const layout = flextree()
+      // .nodeSize(node => [40,  150])
+      .nodeSize(node => {
+        const tsize = getSize(node.data.data.name)
+        const size = [30, (tsize.width+100)]
+        console.log(node.data.data.name, " measure size: ", size)
+        return size
+      })
+      .spacing((nodeA, nodeB) => 30);
 
-    t(root)
-    // const layout = flextree()
-    //   .nodeSize(node => [40, SWITCH_CONST * 150])
-      // .nodeSize(node => {
-      //   const tsize = getSize(node.data.data.name)
-      //   const size = [30, SWITCH_CONST * (tsize.width+100)]
-      //   console.log(node.data.data.name, " measure size: ", size)
-      //   return size
-      // })
-      // .spacing((nodeA, nodeB) => 30);
-
-    // console.log("prev root is ", root)
-    // const t = layout.hierarchy(root);
-    // layout(t);
-    // t.each((node) => {
-    //   if(node.depth == 1) {
-    //     node.y += node.depth * 80 * SWITCH_CONST;
-    //   } else {
-    //     node.y += node.depth * 40 * SWITCH_CONST;
-    //   }
-    // });
-    console.log("root is ", root)
-    // console.log(layout.dump(t)); 
+    const t = layout.hierarchy(root);
+    layout(t);
+    t.each((node) => {
+      if(node.depth == 1) {
+        node.y += node.depth * 80 * SWITCH_CONST;
+      } else {
+        node.y += node.depth * 40 * SWITCH_CONST;
+      }
+    });
+    console.log("dump: ", layout.dump(t)); 
 
 
-    var nodes = root.descendants();
-    var links = root.links();
-    // var nodes = t.descendants().reverse();
-    // var links = t.links();
+    var nodes = t.descendants().reverse();
+    var links = t.links();
     // Set both root nodes to be dead center vertically
     nodes.forEach(function (d) { d.y = d.depth * 130*SWITCH_CONST; if(d.depth==1) d.y+=50*SWITCH_CONST });
-    nodes[0].x = height / 2
 
     console.log("nodes are ", nodes)
     // Create links
@@ -206,7 +190,7 @@ const MindMap = ({ data }) => {
       .attr("dy", 3)
       .style("text-anchor", "middle")
       .text(function(d) {
-        return d.data.name
+        return d.data.data.name
       });
   }
 
