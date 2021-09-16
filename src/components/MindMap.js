@@ -128,7 +128,7 @@ const MindMap = ({ data }) => {
         height = +svg.attr("height")
 
     // Shift the entire tree by half it's width
-    var g = svg.append("g").attr("transform", "scale(0.8 1)\ntranslate(" + width / 1.6 + "," + height / 2 + ")");
+    var g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
     const layout = flextree()
       // .nodeSize(node => [40,  150])
@@ -142,13 +142,6 @@ const MindMap = ({ data }) => {
 
     const t = layout.hierarchy(root);
     layout(t);
-    t.each((node) => {
-      if(node.depth == 1) {
-        node.y += node.depth * 80 * SWITCH_CONST;
-      } else {
-        node.y += node.depth * 40 * SWITCH_CONST;
-      }
-    });
     console.log("dump: ", layout.dump(t)); 
 
 
@@ -182,6 +175,8 @@ const MindMap = ({ data }) => {
       })
 
     node.append("circle")
+      .attr('cx', d => d.ySize/4)
+      .attr('cy', d => 0)
       .attr("r", function(d, i) {
         return 2.5
       });
@@ -232,6 +227,12 @@ const MindMap = ({ data }) => {
         .style("stop-color", "blue")//start in blue
         .style("stop-opacity", 1)
 
+      svg.append("circle")
+        .attr('stroke-width', '2.5')
+        .attr('stroke', '#ff00f0')
+        .attr('cx', d => 400)
+        .attr('cy', d => 200)
+        .attr('r', 5)
 
       // Render both trees
       drawTree(svg, right, "right")

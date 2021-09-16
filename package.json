@@ -10,14 +10,20 @@
     "d3-flextree": "^2.1.1",
     "d3-hierarchy": "^3.0.1",
     "d3-scale": "^4.0.0",
+    "d3-scale-chromatic": "^3.0.0",
     "d3-selection": "^3.0.0",
     "d3-shape": "^3.0.1",
     "d3-time": "^3.0.0",
     "d3-time-format": "^4.0.0",
+    "d3-transition": "^3.0.1",
     "d3-tree": "^1.0.25",
+    "katex": "^0.13.18",
+    "prismjs": "^1.24.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-scripts": "^4.0.3"
+    "react-scripts": "^4.0.3",
+    "remarkable": "^2.0.1",
+    "remarkable-katex": "^1.1.8"
   },
   "alias": {
     "bezier-js": "./node_modules/bezier-js/dist/bezier.js"

@@ -1,3 +1,7 @@
+/*引入 external css*/
+@import '~katex/dist/katex.min.css';
+@import '~prismjs/themes/prism.css';
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
