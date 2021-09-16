@@ -183,10 +183,13 @@ const AnotherMindMap = ({ data, color }) => {
     };
 
     console.log("handleClick  data:", data)
+    let svg = select(d3svg.current)
+    drawTree(svg, rootData.rightData, "right", data)
+    drawTree(svg, rootData.leftData, "left", data)
     // this.renderData(d.data);
   }
 
-  const drawTree = (svg, root, pos) => {
+  const drawTree = (svg, root, pos, originData) => {
     let SWITCH_CONST = 1;
     const spacingHorizontal = 50;
     const spacingVertical = 5;
@@ -199,6 +202,7 @@ const AnotherMindMap = ({ data, color }) => {
     }
 
     const layout = flextree()
+      .children((d) => !d.payload?.fold && d.children)
       .nodeSize(node => {
         const [width, height] = node.data.payload.size;
         return [height, width + (width ? paddingX * 2 : 0) + spacingHorizontal];
@@ -224,7 +228,7 @@ const AnotherMindMap = ({ data, color }) => {
 
     const _transition = (sel) => {
       console.log("sel: ", sel)
-      const duration = 1;
+      const duration = 200;//ms
       return sel.transition().duration(duration);
     }
 
@@ -234,8 +238,8 @@ const AnotherMindMap = ({ data, color }) => {
     // Set both root nodes to be dead center vertically
     // nodes.forEach(function (d) { d.y = d.depth * 130*SWITCH_CONST; if(d.depth==1) d.y+=50*SWITCH_CONST });
     nodes.forEach(function (d) { d.y = d.y * SWITCH_CONST });
-    const origin = descendants && descendants.find(item => item.data === descendants) || t
-    // const origin = originData && descendants.find(item => item.data === originData) || tree;
+    // const origin = descendants && descendants.find(item => item.data === descendants) || t
+    const origin = originData && nodes.find(item => item.data === originData) || t;
     const x0 = origin.data.payload.x0 ?? origin.x;
     const y0 = origin.data.payload.y0 ?? origin.y;
 
@@ -248,24 +252,29 @@ const AnotherMindMap = ({ data, color }) => {
     console.log("treeOffset: ", treeXOffset, ", ", treeYOffset)
     // Shift the entire tree by half it's width
     // var g = svg.append("g").attr("transform", "scale(0.8 1)\ntranslate(" + width / 1.6 + "," + height / 2 + ")");
-    var g = svg.append("g").attr("transform", "translate(" + (width/2 + treeYOffset) + "," + (height / 2 + treeXOffset) + ")");
+    let g = svg.selectAll(`g[pos=${pos}]`)
+    if(g.empty()) {
+      g = svg.append("g").attr("transform", "translate(" + (width/2 + treeYOffset) + "," + (height / 2 + treeXOffset) + ")").attr("pos", pos);
+    }
+    // var g = svg.append("g").attr("transform", "translate(" + (width/2 + treeYOffset) + "," + (height / 2 + treeXOffset) + ")");
 
 
     const node = g.selectAll(childSelector('g'))
       .data(nodes, d => d.data.payload.key);
 
     const nodeEnter = node.enter().append('g')
-      .attr('transform', d => `translate(${y0},${x0})`);
+      // .attr('transform', d => `translate(${y0},${x0})`);
+      .attr('transform', d => `translate(${y0 + origin.ySizeInner - d.ySizeInner},${x0 + origin.xSize / 2 - d.xSize})`);
 
     const nodeExit = _transition(node.exit());
     nodeExit.select('rect').attr('width', 0).attr('x', d => d.ySizeInner);
     nodeExit.select('foreignObject').style('opacity', 0);
-    nodeExit.attr('transform', d => `translate(${origin.y}, ${origin.x})`).remove();
+    nodeExit.attr('transform', d => `translate(${origin.y + origin.ySizeInner - d.ySizeInner},${origin.x + origin.xSize / 2 - d.xSize})`).remove();
 
     const nodeMerge = node.merge(nodeEnter);
 
-
-    _transition(nodeMerge).attr('transform', d => `translate(${d.y },${d.x})`);
+    // this.transition(nodeMerge).attr('transform', d => `translate(${d.y},${d.x - d.xSize / 2})`);
+    _transition(nodeMerge).attr('transform', d => `translate(${d.y},${d.x})`);
 
     // const rect = nodeMerge.select(childSelector('rect'))
     //   .data(d => d, d => d.data.payload.key)
@@ -377,8 +386,10 @@ const AnotherMindMap = ({ data, color }) => {
       });
 
 
-
-
+    nodes.forEach(d => {
+      d.data.payload.x0 = d.x;
+      d.data.payload.y0 = d.y;
+    });
 
     // var link = g.selectAll(".link")
     //   .data(links)
