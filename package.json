@@ -24,7 +24,8 @@
     "react-dom": "^17.0.2",
     "react-scripts": "^4.0.3",
     "remarkable": "^2.0.1",
-    "remarkable-katex": "^1.1.8"
+    "remarkable-katex": "^1.1.8",
+    "webfontloader": "^1.6.28"
   },
   "alias": {
     "bezier-js": "./node_modules/bezier-js/dist/bezier.js"

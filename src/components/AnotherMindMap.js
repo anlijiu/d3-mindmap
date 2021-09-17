@@ -12,6 +12,7 @@ import * as chromatic from 'd3-scale-chromatic';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { linkHorizontal } from 'd3-shape';
 import { tree, hierarchy } from 'd3-hierarchy';
+import usePrevious from './hooks/usePrevious';
 import loadLanguages from 'prismjs/components/index.js';
 import flextree from './flextree';
 import BezierModule from '../bezier';
@@ -27,12 +28,13 @@ const height = 400 - margin.top - margin.bottom
 
 const color = ['#f05440', '#d5433d', '#b33535', '#283250']
 
-const AnotherMindMap = ({ data, color, layout }) => {
+const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
   const spacingHorizontal = 30;
   const spacingVertical = 5;
   const paddingX = 8;
   const diameter = 12;
   const radius = 6;
+  const previousFontLoaded = usePrevious(fontsLoaded);
 
   const idRef = useRef(getId());
   const d3svg = useRef(null);
@@ -491,11 +493,10 @@ ${extraStyle}
     // Render both trees
   }, [])
 
-  useEffect(() => {
-    if (rootData && d3svg.current && invisible.current) {
-      const style = document.createElement('style');
-      const containerClass = `${idRef.current}-container`;
-      style.textContent = `
+  const measureNodeSize = () => {
+    const style = document.createElement('style');
+    const containerClass = `${idRef.current}-container`;
+    style.textContent = `
 ${getStyleContent()}
 .${containerClass} {
   position: absolute;
@@ -510,50 +511,61 @@ ${getStyleContent()}
   display: inline-block;
 }
 `;
-      document.body.append(style, invisible.current);
+    document.body.append(style, invisible.current);
 
-      let i = 0;
-      const walkTreeCallback1 = (item, next, parent, ci) => {
-        item.children = item.children?.map(child => ({ ...child }));
-        i += 1;
-        const el = document.createElement('div');
-        el.innerHTML = item.value;
-        invisible.current.append(el);
-        // container.append(el);
-        item.payload = {
-          ...item.payload,
-          i,
-          ci,
-          // unique ID
-          el,
-        };
+    let i = 0;
+    const walkTreeCallback1 = (item, next, parent, ci) => {
+      item.children = item.children?.map(child => ({ ...child }));
+      i += 1;
+      const el = document.createElement('div');
+      el.innerHTML = item.value;
+      invisible.current.append(el);
+      // container.append(el);
+      item.payload = {
+        ...item.payload,
+        i,
+        ci,
+        // unique ID
+        el,
+      };
 
-        // color(item); // preload colors
-        next();
-      }
+      // color(item); // preload colors
+      next();
+    }
 
-      const nodeMinHeight = 18;
-      const walkTreeCallback2 = (item, next, parent) => {
-        const rect = item.payload.el.getBoundingClientRect();
-        // item.outerHTML = item.payload.el.outerHTML;
-        item.value = item.payload.el.innerHTML;
-        item.payload.size = [Math.ceil(rect.width), Math.max(Math.ceil(rect.height), nodeMinHeight)];
-        // TODO keep keys for unchanged objects
-        // unique key, should be based on content
-        item.payload.key = `${parent?.payload?.i || ''}.${item.payload.i}:${item.value}`;
-        next();
-      }
+    const nodeMinHeight = 18;
+    const walkTreeCallback2 = (item, next, parent) => {
+      const rect = item.payload.el.getBoundingClientRect();
+      // item.outerHTML = item.payload.el.outerHTML;
+      item.value = item.payload.el.innerHTML;
+      item.payload.size = [Math.ceil(rect.width), Math.max(Math.ceil(rect.height), nodeMinHeight)];
+      // TODO keep keys for unchanged objects
+      // unique key, should be based on content
+      item.payload.key = `${parent?.payload?.i || ''}.${item.payload.i}:${item.value}`;
+      next();
+    }
 
-      walkTree(rootData.leftData, walkTreeCallback1);
-      walkTree(rootData.rightData, walkTreeCallback1);
+    walkTree(rootData.leftData, walkTreeCallback1);
+    walkTree(rootData.rightData, walkTreeCallback1);
 
-      walkTree(rootData.leftData, walkTreeCallback2);
-      walkTree(rootData.rightData, walkTreeCallback2);
+    walkTree(rootData.leftData, walkTreeCallback2);
+    walkTree(rootData.rightData, walkTreeCallback2);
+  }
 
+  useEffect(() => {
+    if (rootData && d3svg.current && invisible.current) {
+      measureNodeSize();
       globalG.current.selectAll('g').remove();
       draw();
     }
   }, [rootData, layout])
+
+  useEffect(() => {
+    if(fontsLoaded && previousFontLoaded != fontsLoaded){
+      measureNodeSize();
+      draw();
+    }
+  }, [fontsLoaded])
 
         // width={width + margin.left + margin.right}
         // height={height + margin.top + margin.bottom}
@@ -576,10 +588,12 @@ ${getStyleContent()}
 AnotherMindMap.propTypes = {
   data: PropTypes.array|PropTypes.object,
   layout: PropTypes.string,
+  fontsLoaded: PropTypes.bool,
   color: PropTypes.func
 };
 AnotherMindMap.defaultProps = {
   layout: 'right-left',
+  fontsLoaded: false,
   color: (node) => {
     const c = scaleOrdinal(schemeCategory10).domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])(node.payload.i-1)
     console.log("color : ", c, "   xxi: ", node.payload.i)
