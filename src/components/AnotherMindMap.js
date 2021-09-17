@@ -3,10 +3,12 @@ import PropTypes from 'prop-types';
 import { Remarkable } from 'remarkable';
 import rkatex from 'remarkable-katex';
 import Prism from 'prismjs';
+import {zoom} from 'd3-zoom';
 import { select } from 'd3-selection'
 import transition from 'd3-transition';
 import { scaleOrdinal, scaleLinear, scaleBand } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
+import * as chromatic from 'd3-scale-chromatic';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { linkHorizontal } from 'd3-shape';
 import { tree, hierarchy } from 'd3-hierarchy';
@@ -21,17 +23,48 @@ console.log("  bezier : ", Bezier)
 
 // margin convention often used with D3
 const margin = { top: 80, right: 60, bottom: 80, left: 60 }
-const width = 800 - margin.left - margin.right
+const width = 1200 - margin.left - margin.right
 const height = 400 - margin.top - margin.bottom
-
 
 const color = ['#f05440', '#d5433d', '#b33535', '#283250']
 
-const AnotherMindMap = ({ data, color }) => {
+const AnotherMindMap = ({ data, color, layout }) => {
+
+  const spacingHorizontal = 50;
+  const spacingVertical = 5;
+  const paddingX = 8;
+  const diameter = 12;
+  const radius = 6;
+
   const idRef = useRef(getId());
   const d3svg = useRef(null);
+  const globalG = useRef(null);
+  const leftG = useRef(null);
+  const rightG = useRef(null);
   const invisible = useRef(null);
-  const [md] = useState (() => {
+  const [colors, ] = useState (() => {
+    //https://stackoverflow.com/questions/42973502/understanding-d3-domain-and-ranges
+    
+    const sequentialSingleHueNames = ["Blues", "Greens", "Greys", "Oranges", "Purples", "Reds"];
+    const sequentialMultiHueNames1 = ["BuGn", "BuPu", "GnBu", "OrRd", "PuBuGn", "PuBu", "PuRd", "RdPu", "YlGnBu", "YlGn", "YlOrBr", "YlOrRd"];
+    const sequentialMultiHueNames2 = ["Cividis", "Viridis", "Inferno", "Magma", "Plasma", "Warm", "Cool", "CubehelixDefault", "Turbo"];
+    const DivergingNames = ["BrBG", "PRGn", "PiYG", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral"];
+    const cyclicalNames = ["Rainbow", "Sinebow"];
+    const colors = sequentialSingleHueNames.map(name => {
+      console.log(`chromatic[scheme${name}]: `, chromatic[`scheme${name}`]);
+      return chromatic[`scheme${name}`][9];
+    });
+    // d3[`scheme${name}`] && d3[`scheme${name}`][n]) {
+
+    return colors;
+  })
+  const getColor = (node) => {
+    const ci = node.payload.ci % colors.length;
+    console.log("xxxxxxxxxxxxxx ci:", ci, "   func: ",  colors[ci],  " colors:",  colors)
+    const c = colors[ci][node.depth]
+    return c;
+  }
+  const [md, ] = useState (() => {
     const markable = new Remarkable({
       html: true,
       breaks: true,
@@ -64,21 +97,27 @@ const AnotherMindMap = ({ data, color }) => {
     let root = buildTree(tokens, md)
     cleanNode(root);
     if (root.children?.length === 1) root = root.children[0];
+    if(layout === 'right') {
+      return {
+        leftData: { children: []},
+        rightData: root
+      }
+    }
     const { children , ...rootProps } = root;
     const split_index = Math.round(children.length / 2)
-    // Left data
-    const leftData = {
+    // Right data
+    const rightData = {
       ...rootProps,
       children: children.slice(0, split_index)
     };
-      // Right data
-    const rightData = {
+      // Left data
+    const leftData = {
       ...rootProps,
       children: children.slice(split_index)
     };
 
     return { leftData, rightData };
-  }, [data]);
+  }, [data, layout]);
 
   console.log(" rootData: ", rootData );
 
@@ -175,6 +214,12 @@ const AnotherMindMap = ({ data, color }) => {
     return Math.max(6 - 2 * data.depth, 1.5);
   }
 
+  const handleZoom = (e) => {
+    console.log("handleZoom in ")
+    const { transform } = e;
+    globalG.current.attr('transform', transform);
+  }
+
   const handleClick = (e, d) => {
     const { data } = d;
     data.payload = {
@@ -183,25 +228,27 @@ const AnotherMindMap = ({ data, color }) => {
     };
 
     console.log("handleClick  data:", data)
-    let svg = select(d3svg.current)
-    drawTree(svg, rootData.rightData, "right", data)
-    drawTree(svg, rootData.leftData, "left", data)
+    draw(data)
     // this.renderData(d.data);
   }
 
-  const drawTree = (svg, root, pos, originData) => {
+  const draw = (originData) => {
+    if(layout === 'right') {
+      drawTree(rootData.rightData, "right", originData)
+    } else if(layout === 'right-left') {
+      drawTree(rootData.rightData, "right", originData)
+      drawTree(rootData.leftData, "left", originData)
+    }
+  }
+
+  const drawTree = (root, pos, originData) => {
     let SWITCH_CONST = 1;
-    const spacingHorizontal = 50;
-    const spacingVertical = 5;
-    const paddingX = 8;
-    const diameter = 12;
-    const radius = 6;
 
     if (pos === "left") {
       SWITCH_CONST = -1;
     }
 
-    const layout = flextree()
+    const treeLayout = flextree()
       .children((d) => !d.payload?.fold && d.children)
       .nodeSize(node => {
         const [width, height] = node.data.payload.size;
@@ -211,20 +258,12 @@ const AnotherMindMap = ({ data, color }) => {
         return a.parent === b.parent ? spacingVertical : spacingVertical * 2;
       });
 
-    const t = layout.hierarchy(root);
-    layout(t);
+    const t = treeLayout.hierarchy(root);
+    treeLayout(t);
     console.log("t: ", t)
     adjustSpacing(t, spacingHorizontal, SWITCH_CONST);
 
-    const descendants = t.descendants().reverse();
-    // t.each((node) => {
-    //   if(node.depth == 1) {
-    //     node.y += node.depth * 80 * SWITCH_CONST;
-    //   } else {
-    //     node.y += node.depth * 40 * SWITCH_CONST;
-    //   }
-    // });
-    console.log("dump: ", layout.dump(t)); 
+    console.log("dump: ", treeLayout.dump(t)); 
 
     const _transition = (sel) => {
       console.log("sel: ", sel)
@@ -243,6 +282,7 @@ const AnotherMindMap = ({ data, color }) => {
     const x0 = origin.data.payload.x0 ?? origin.x;
     const y0 = origin.data.payload.y0 ?? origin.y;
 
+    const svg = select(d3svg.current);
     var width  = +svg.attr("width"),
         height = +svg.attr("height")
 
@@ -251,10 +291,15 @@ const AnotherMindMap = ({ data, color }) => {
     // const treeOffset = 0; // -120 50  =85>  -35 -35    width54   ysizeinner70   r6   paddingX8 
     console.log("treeOffset: ", treeXOffset, ", ", treeYOffset)
     // Shift the entire tree by half it's width
-    // var g = svg.append("g").attr("transform", "scale(0.8 1)\ntranslate(" + width / 1.6 + "," + height / 2 + ")");
-    let g = svg.selectAll(`g[pos=${pos}]`)
+    let g = globalG.current.selectChildren(`g[pos=${pos}]`)
     if(g.empty()) {
-      g = svg.append("g").attr("transform", "translate(" + (width/2 + treeYOffset) + "," + (height / 2 + treeXOffset) + ")").attr("pos", pos);
+      g = globalG.current.append("g").attr("pos", pos);
+    }
+
+    if(layout === "right-left") {
+      g.attr("transform", "translate(" + (width/2 + treeYOffset) + "," + (height / 2 + treeXOffset) + ")");
+    } else {
+      g.attr("transform", "translate(0," + (height / 2 + treeXOffset) + ")");
     }
     // var g = svg.append("g").attr("transform", "translate(" + (width/2 + treeYOffset) + "," + (height / 2 + treeXOffset) + ")");
 
@@ -295,7 +340,7 @@ const AnotherMindMap = ({ data, color }) => {
     //   .attr('width', d => d.ySizeInner + 2)
 
     const circle = nodeMerge.selectAll(childSelector('circle'))
-      .data(d => (d.data.children ? [d] : []), d => d.data.payload.key)
+      .data(d => (d.data.children && d.data.children.length > 0 ? [d] : []), d => d.data.payload.key)
       .join(
         enter => {
           return enter.append('circle')
@@ -310,8 +355,8 @@ const AnotherMindMap = ({ data, color }) => {
       );
     _transition(circle)
       .attr('r', radius)
-      .attr('stroke', d => color(d.data))
-      .attr('fill', d => (d.data.payload?.fold && d.data.children ? color(d.data) : '#fff'));
+      .attr('stroke', d => getColor(d.data))
+      .attr('fill', d => (d.data.payload?.fold && d.data.children ? getColor(d.data) : '#fff'));
 
 
     const id = idRef.current;
@@ -370,9 +415,9 @@ const AnotherMindMap = ({ data, color }) => {
         },
       );
     _transition(path)
-      .attr('stroke', d => color(d.target.data))
+      .attr('stroke', d => getColor(d.target.data))
       .attr('stroke-width', d => linkWidth(d.target))
-      .attr('fill', d => d.source.parent ? 'none': color(d.target.data)  )
+      .attr('fill', d => d.source.parent ? 'none': getColor(d.target.data)  )
       .attr('d', d => {
         const source = [
           SWITCH_CONST == 1 ? d.source.y + d.source.ySizeInner : d.source.y,
@@ -391,40 +436,6 @@ const AnotherMindMap = ({ data, color }) => {
       d.data.payload.y0 = d.y;
     });
 
-    // var link = g.selectAll(".link")
-    //   .data(links)
-    //   .enter()
-    // 
-    // link.append("path")
-    //   .attr("class", "link")
-    //   .attr("d", (d) => blink(d, SWITCH_CONST))
-    //   // .attr("stroke", (d) => "#5555")
-    //   .attr("stroke", function(d) { return d.source.parent ? "#555": "none" } )
-    //   .attr("fill", function(d) { return d.source.parent ? "none": "url(#mygrad)" } );
-    // Create nodes
-    // var _node = g.selectAll(".node")
-    //   .data(nodes)
-    //   .enter()
-    //   .append("g")
-    //   .attr("class", function(d) {
-    //     return "node" + (d.children ? " node--internal" : " node--leaf");
-    //   })
-    //   .attr("transform", function(d) {
-    //     return "translate(" + d.y + "," + d.x + ")";
-    //   })
-    // 
-    // _node.append("circle")
-    //    .attr('stroke-width', '1.5')
-    //    .attr('cx', d => d.ySizeInner)
-    //    .attr('cy', d => d.xSize)
-    //    .attr('r', 0)
-    // 
-    // _node.append("text")
-    //   .attr("dy", 3)
-    //   .style("text-anchor", "middle")
-    //   .text(function(d) {
-    //     return d.data.name
-    //   });
   }
 
   const nodeFont = 'italic bold 12px arial,serif';
@@ -451,8 +462,50 @@ ${extraStyle}
   }
 
   useEffect(() => {
-    if (rootData && d3svg.current && invisible.current) {
+    let svg = select(d3svg.current);
+    globalG.current = svg.append('g');
+    const zoomHandler = zoom()
+      .on('zoom', handleZoom)
+      .scaleExtent([0.1, 1000]);
+    svg.call(zoomHandler);
+    
+    svg.append('style')
+      .text(getStyleContent());
+    let defs = svg.append("defs");
 
+    svg.append("circle")
+      .attr('stroke-width', '1.5')
+      .attr('stroke', '#ff0000')
+      .attr('cx', d => (width + margin.left + margin.right)/2)
+      .attr('cy', d => (height + margin.top + margin.bottom)/2)
+      .attr('r', 3)
+
+    var lg = defs.append("linearGradient")
+      .attr("id", "mygrad")//id of the gradient
+      .attr("x1", "0%")
+      .attr("x2", "0%")
+      .attr("y1", "0%")
+      .attr("y2", "100%")//since its a vertical linear gradient 
+    ;
+    lg.append("stop")
+      .attr("offset", "0%")
+      .style("stop-color", "red")//end in red
+      .style("stop-opacity", 1)
+
+    lg.append("stop")
+      .attr("offset", "100%")
+      .style("stop-color", "blue")//start in blue
+      .style("stop-opacity", 1)
+    // var element = document.createElement("link");
+    // element.setAttribute("rel", "stylesheet");
+    // element.setAttribute("type", "text/css");
+    // element.setAttribute("href", "https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css");
+    // document.getElementsByTagName("head")[0].appendChild(element);
+    // Render both trees
+  }, [])
+
+  useEffect(() => {
+    if (rootData && d3svg.current && invisible.current) {
       const style = document.createElement('style');
       const containerClass = `${idRef.current}-container`;
       style.textContent = `
@@ -473,7 +526,7 @@ ${getStyleContent()}
       document.body.append(style, invisible.current);
 
       let i = 0;
-      const walkTreeCallback1 = (item, next) => {
+      const walkTreeCallback1 = (item, next, parent, ci) => {
         item.children = item.children?.map(child => ({ ...child }));
         i += 1;
         const el = document.createElement('div');
@@ -483,6 +536,7 @@ ${getStyleContent()}
         item.payload = {
           ...item.payload,
           i,
+          ci,
           // unique ID
           el,
         };
@@ -510,43 +564,7 @@ ${getStyleContent()}
       walkTree(rootData.leftData, walkTreeCallback2);
       walkTree(rootData.rightData, walkTreeCallback2);
 
-      let svg = select(d3svg.current)
-      svg.append('style')
-        .text(getStyleContent());
-      let defs = svg.append("defs");
-
-      svg.append("circle")
-        .attr('stroke-width', '1.5')
-        .attr('stroke', '#ff0000')
-        .attr('cx', d => 400)
-        .attr('cy', d => 200)
-        .attr('r', 3)
-
-      var lg = defs.append("linearGradient")
-        .attr("id", "mygrad")//id of the gradient
-        .attr("x1", "0%")
-        .attr("x2", "0%")
-        .attr("y1", "0%")
-        .attr("y2", "100%")//since its a vertical linear gradient 
-      ;
-      lg.append("stop")
-        .attr("offset", "0%")
-        .style("stop-color", "red")//end in red
-        .style("stop-opacity", 1)
-
-      lg.append("stop")
-        .attr("offset", "100%")
-        .style("stop-color", "blue")//start in blue
-        .style("stop-opacity", 1)
-
-      // var element = document.createElement("link");
-      // element.setAttribute("rel", "stylesheet");
-      // element.setAttribute("type", "text/css");
-      // element.setAttribute("href", "https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css");
-      // document.getElementsByTagName("head")[0].appendChild(element);
-      // Render both trees
-      drawTree(svg, rootData.rightData, "right")
-      drawTree(svg, rootData.leftData, "left")
+      draw();
     }
   }, [rootData])
 
@@ -568,10 +586,16 @@ ${getStyleContent()}
 
 AnotherMindMap.propTypes = {
   data: PropTypes.array|PropTypes.object,
+  layout: PropTypes.string,
   color: PropTypes.func
 };
 AnotherMindMap.defaultProps = {
-  color: (node) => scaleOrdinal(schemeCategory10)(node.payload.i),
+  layout: 'right-left',
+  color: (node) => {
+    const c = scaleOrdinal(schemeCategory10).domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])(node.payload.i-1)
+    console.log("color : ", c, "   xxi: ", node.payload.i)
+    return c;
+  },
 };
 
 

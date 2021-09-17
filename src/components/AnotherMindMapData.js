@@ -24,7 +24,16 @@ function prepareBarChartData(data) {
 }
 
 const AnotherMindMapData = () => {
+  const [layout, setLayout] = useState("right-left");
   const [mindMapData, setMindMapData] = useState(null)
+
+  const handleLayout = () => {
+    if(layout === "right") {
+      setLayout("right-left")
+    } else if(layout === "right-left") {
+      setLayout("right")
+    }
+  }
 
   useEffect(() => {
     text('/static/data/test.md', type).then(data => {
@@ -36,7 +45,16 @@ const AnotherMindMapData = () => {
     return <p>Loading...</p>
   }
 
-  return <AnotherMindMap data={mindMapData} />
+  return(
+    <div>
+      <div style={{display: 'inline-block'}}>
+        <button onClick={handleLayout}>
+          {`layout: ${layout}`}
+        </button>
+      </div>
+      <AnotherMindMap data={mindMapData} layout={layout}/>
+    </div>
+  );
 }
 
 export default AnotherMindMapData

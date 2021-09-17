@@ -7,13 +7,19 @@ export function getId(): string {
   return `mm-${uniqId}-${globalIndex}`;
 }
 
+/**
+ * callback 第一个参数 为item
+ * 第二个参数是继续遍历孩子
+ * 第三个参数parent 
+ * 第四个参数在兄弟中的index
+ */
 export function walkTree(tree, callback, key = 'children') {
-  const walk = (item, parent) => callback(item, () => {
-    item[key]?.forEach((child) => {
-      walk(child, item);
+  const walk = (item, parent, index) => callback(item, () => {
+    item[key]?.forEach((child, ci) => {
+      walk(child, item, ci);
     });
-  }, parent);
-  walk(tree);
+  }, parent, index);
+  walk(tree, undefined, 0);
 }
 
 export function arrayFrom(arrayLike) {
