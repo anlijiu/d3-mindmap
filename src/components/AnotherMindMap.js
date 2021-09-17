@@ -190,7 +190,7 @@ const AnotherMindMap = ({ data, color, layout }) => {
           target[0], target[1],//起点
         ]);
       let p;
-      const outline = origBezier.outline(3, 3, .1, .1);
+      const outline = origBezier.outline(3, 3, .01, .01);
       p = outline.curves.reduce((total, item, index) => `${total} ${index ==0 ? item.toSVG() : item.toSVG().replace('M', 'L')}`, "")
       p += 'Z';
       console.log("final P : ", p)
@@ -564,9 +564,10 @@ ${getStyleContent()}
       walkTree(rootData.leftData, walkTreeCallback2);
       walkTree(rootData.rightData, walkTreeCallback2);
 
+      globalG.current.selectAll('g').remove();
       draw();
     }
-  }, [rootData])
+  }, [rootData, layout])
 
   return (
     <div>
