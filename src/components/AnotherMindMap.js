@@ -347,6 +347,7 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
     _transition(circle)
       .attr('r', radius)
       .attr('stroke', d => getColor(d.data))
+      .attr('cy', d => d.xSize/2)
       .attr('fill', d => (d.data.payload?.fold && d.data.children ? getColor(d.data) : '#fff'));
 
 
