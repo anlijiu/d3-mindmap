@@ -18,7 +18,6 @@ import BezierModule from '../bezier';
 import { buildTree, cleanNode } from './markmap/lib';
 import { getId, walkTree, childSelector } from './markmap/utils';
 const { Bezier } = BezierModule;
-console.log("  bezier : ", Bezier)
 // const { Bezier } = bezier
 
 // margin convention often used with D3
@@ -29,8 +28,7 @@ const height = 400 - margin.top - margin.bottom
 const color = ['#f05440', '#d5433d', '#b33535', '#283250']
 
 const AnotherMindMap = ({ data, color, layout }) => {
-
-  const spacingHorizontal = 50;
+  const spacingHorizontal = 30;
   const spacingVertical = 5;
   const paddingX = 8;
   const diameter = 12;
@@ -50,19 +48,14 @@ const AnotherMindMap = ({ data, color, layout }) => {
     const sequentialMultiHueNames2 = ["Cividis", "Viridis", "Inferno", "Magma", "Plasma", "Warm", "Cool", "CubehelixDefault", "Turbo"];
     const DivergingNames = ["BrBG", "PRGn", "PiYG", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral"];
     const cyclicalNames = ["Rainbow", "Sinebow"];
-    const colors = sequentialSingleHueNames.map(name => {
-      console.log(`chromatic[scheme${name}]: `, chromatic[`scheme${name}`]);
-      return chromatic[`scheme${name}`][9];
-    });
-    // d3[`scheme${name}`] && d3[`scheme${name}`][n]) {
+    const colors = sequentialSingleHueNames.map(name => chromatic[`scheme${name}`][9]);
 
     return colors;
   })
   const getColor = (node) => {
     const ci = node.payload.ci % colors.length;
-    console.log("xxxxxxxxxxxxxx ci:", ci, "   func: ",  colors[ci],  " colors:",  colors)
-    const c = colors[ci][node.depth]
-    return c;
+    const di = node.depth % 10;
+    return colors[ci][di]
   }
   const [md, ] = useState (() => {
     const markable = new Remarkable({
@@ -177,7 +170,6 @@ const AnotherMindMap = ({ data, color, layout }) => {
   }
 // d="M377,-56.5C269.6,-56.5 337,9 297,9"
   const linkShape = ({source, target, ratio = 1, staticWidth = true}) => {
-    console.log("linkShape, source:", source, ",  target:", target)
     if(staticWidth) {
       const linkShape = linkHorizontal() 
       return linkShape({source, target});
@@ -193,7 +185,6 @@ const AnotherMindMap = ({ data, color, layout }) => {
       const outline = origBezier.outline(3, 3, .01, .01);
       p = outline.curves.reduce((total, item, index) => `${total} ${index ==0 ? item.toSVG() : item.toSVG().replace('M', 'L')}`, "")
       p += 'Z';
-      console.log("final P : ", p)
       return p;
     }
   }
@@ -201,7 +192,9 @@ const AnotherMindMap = ({ data, color, layout }) => {
   const adjustSpacing = (tree, spacing, SWITCH_CONST) => {
     walkTree(tree, (d, next) => {
       d.ySizeInner = d.ySize - spacing;
-      console.log("adjustSpacing: ySizeInner", d.ySizeInner, "   d.ySize:", d.ySize)
+      if(d.data.value && d.data.value.startsWith("Katex")) {
+        console.log("katex ySizeInner: ", d.ySizeInner, d)
+      }
       const leftw = SWITCH_CONST == 1 ? 0 : d.ySizeInner;
       d.y += spacing + leftw; //* SWITCH_CONST;
       next();
@@ -215,7 +208,6 @@ const AnotherMindMap = ({ data, color, layout }) => {
   }
 
   const handleZoom = (e) => {
-    console.log("handleZoom in ")
     const { transform } = e;
     globalG.current.attr('transform', transform);
   }
@@ -227,7 +219,6 @@ const AnotherMindMap = ({ data, color, layout }) => {
       fold: !data.payload?.fold,
     };
 
-    console.log("handleClick  data:", data)
     draw(data)
     // this.renderData(d.data);
   }
@@ -260,13 +251,9 @@ const AnotherMindMap = ({ data, color, layout }) => {
 
     const t = treeLayout.hierarchy(root);
     treeLayout(t);
-    console.log("t: ", t)
     adjustSpacing(t, spacingHorizontal, SWITCH_CONST);
 
-    console.log("dump: ", treeLayout.dump(t)); 
-
     const _transition = (sel) => {
-      console.log("sel: ", sel)
       const duration = 200;//ms
       return sel.transition().duration(duration);
     }
@@ -283,13 +270,15 @@ const AnotherMindMap = ({ data, color, layout }) => {
     const y0 = origin.data.payload.y0 ?? origin.y;
 
     const svg = select(d3svg.current);
-    var width  = +svg.attr("width"),
-        height = +svg.attr("height")
+    const box = svg.node().getBoundingClientRect();
+    const width = box.width;
+    const height = box.height;
+    // var width  = +svg.attr("width"),
+    //     height = +svg.attr("height")
 
     const treeYOffset = -t.y - t.ySizeInner/2;
     const treeXOffset = -t.xSize/2;
-    // const treeOffset = 0; // -120 50  =85>  -35 -35    width54   ysizeinner70   r6   paddingX8 
-    console.log("treeOffset: ", treeXOffset, ", ", treeYOffset)
+    // console.log("treeOffset: ", treeXOffset, ", ", treeYOffset)
     // Shift the entire tree by half it's width
     let g = globalG.current.selectChildren(`g[pos=${pos}]`)
     if(g.empty()) {
@@ -388,8 +377,6 @@ const AnotherMindMap = ({ data, color, layout }) => {
 
     _transition(foreignObject)
       .style('opacity', 1);
-    console.log("nodes are ", nodes)
-
 
     // Create links
     const path = g.selectAll(childSelector('path'))
@@ -548,7 +535,6 @@ ${getStyleContent()}
       const nodeMinHeight = 18;
       const walkTreeCallback2 = (item, next, parent) => {
         const rect = item.payload.el.getBoundingClientRect();
-        console.log("rect: ", rect)
         // item.outerHTML = item.payload.el.outerHTML;
         item.value = item.payload.el.innerHTML;
         item.payload.size = [Math.ceil(rect.width), Math.max(Math.ceil(rect.height), nodeMinHeight)];
@@ -569,13 +555,15 @@ ${getStyleContent()}
     }
   }, [rootData, layout])
 
+        // width={width + margin.left + margin.right}
+        // height={height + margin.top + margin.bottom}
   return (
     <div>
       <div ref={invisible} className={`${idRef.current}-container ${idRef.current}-fo`}>
       </div>
       <svg
-        width={width + margin.left + margin.right}
-        height={height + margin.top + margin.bottom}
+        width='100%'
+        height='100%'
         className="mindmap-container"
         role="img"
         ref={d3svg}
