@@ -412,7 +412,7 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
             SWITCH_CONST + source[1]
           ]
           return _transition(exit)
-            .attr('d', d => linkShape({ source, target, staticWidth: !!d.source.parent }))
+            .attr('d', d => linkShape({ source, target: !!d.source.parent ? source : target, staticWidth: !!d.source.parent }))
             .remove();
         },
       );
@@ -474,6 +474,7 @@ ${extraStyle}
     
     svg.append('style')
       .text(getStyleContent());
+
     let defs = svg.append("defs");
 
     svg.append("circle")
@@ -590,7 +591,7 @@ ${getStyleContent()}
       <svg
         width='100%'
         height='100%'
-        className="mindmap-container"
+        className={`mindmap-container ${idRef.current}`}
         role="img"
         ref={d3svg}
       ></svg>
