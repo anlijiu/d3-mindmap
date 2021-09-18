@@ -32,8 +32,8 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
   const spacingHorizontal = 30;
   const spacingVertical = 5;
   const paddingX = 8;
-  const diameter = 12;
-  const radius = 6;
+  // const diameter = 6;
+  const radius = 4;
   const previousFontLoaded = usePrevious(fontsLoaded);
 
   const idRef = useRef(getId());
@@ -171,7 +171,8 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
     return [...fcurves, ...bcurves];
   }
 // d="M377,-56.5C269.6,-56.5 337,9 297,9"
-  const linkShape = ({source, target, ratio = 1, staticWidth = true}) => {
+  const linkShape = ({source, target, ratio = 1, staticWidth = true, outlineStartWidth = 3, outlineEndWidth = 0.01}) => {
+    console.log("linkShape source:", source, " target:", target)
     if(staticWidth) {
       const linkShape = linkHorizontal() 
       return linkShape({source, target});
@@ -184,9 +185,10 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
           target[0], target[1],//起点
         ]);
       let p;
-      const outline = origBezier.outline(3, 3, .01, .01);
+      const outline = origBezier.outline(outlineStartWidth, outlineStartWidth, outlineEndWidth, outlineEndWidth);
       p = outline.curves.reduce((total, item, index) => `${total} ${index ==0 ? item.toSVG() : item.toSVG().replace('M', 'L')}`, "")
       p += 'Z';
+      console.log("pppppppppppppp is :", p, "  source:", source, " target:", target, " staticWidth")
       return p;
     }
   }
@@ -256,7 +258,7 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
     adjustSpacing(t, spacingHorizontal, SWITCH_CONST);
 
     const _transition = (sel) => {
-      const duration = 200;//ms
+      const duration = 2200;//ms
       return sel.transition().duration(duration);
     }
 
@@ -265,7 +267,7 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
     var links = t.links();
     // Set both root nodes to be dead center vertically
     // nodes.forEach(function (d) { d.y = d.depth * 130*SWITCH_CONST; if(d.depth==1) d.y+=50*SWITCH_CONST });
-    nodes.forEach(function (d) { d.y = d.y * SWITCH_CONST });
+    nodes.forEach(function (d) { d.y = d.y * SWITCH_CONST; });
     // const origin = descendants && descendants.find(item => item.data === descendants) || t
     const origin = originData && nodes.find(item => item.data === originData) || t;
     const x0 = origin.data.payload.x0 ?? origin.x;
@@ -305,7 +307,7 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
     const nodeExit = _transition(node.exit());
     nodeExit.select('rect').attr('width', 0).attr('x', d => d.ySizeInner);
     nodeExit.select('foreignObject').style('opacity', 0);
-    nodeExit.attr('transform', d => `translate(${origin.y + origin.ySizeInner - d.ySizeInner},${origin.x + origin.xSize / 2 - d.xSize})`).remove();
+    nodeExit.attr('transform', d => `translate(${origin.y + origin.ySizeInner - d.ySizeInner},${origin.x + origin.xSize / 2 - d.xSize/2})`).remove();
 
     const nodeMerge = node.merge(nodeEnter);
 
@@ -337,12 +339,12 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
           return enter.append('circle')
             .attr('stroke-width', '1.5')
             .attr('cx', d => SWITCH_CONST == 1 ? d.ySizeInner : 0)
-            .attr('cy', d => d.xSize/2)
-            .attr('r', radius)
+            .attr('cy', d => d.xSize )
+            .attr('r', 0)
             .on('click', handleClick);
         },
         update => update,
-        exit => exit.remove(),
+        exit => exit.attr('r', 0).remove(),
       );
     _transition(circle)
       .attr('r', radius)
@@ -387,27 +389,38 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
       .join(
         enter => {
           const source = [
-            y0 + origin.ySizeInner,
+            SWITCH_CONST == 1 ? y0 + origin.ySizeInner : y0,
             x0 + origin.xSize / 2,
           ];
+          const target = [
+            SWITCH_CONST + source[0],
+            SWITCH_CONST + source[1]
+          ]
+          console.log("asdf", enter)
           return enter.insert('path', 'g')
-            .attr('d', linkShape({ source, target: source, staticWidth: true }));
+            .style('opacity', 0)
+            .attr('d', d => linkShape({ source, target: !!d.source.parent ? source : target, staticWidth: !!d.source.parent }));
         },
         update => update,
         exit => {
           const source = [
-            origin.y + origin.ySizeInner,
+            SWITCH_CONST == 1 ? origin.y + origin.ySizeInner : origin.y,
             origin.x + origin.xSize / 2,
           ];
+          const target = [
+            SWITCH_CONST + source[0],
+            SWITCH_CONST + source[1]
+          ]
           return _transition(exit)
-            .attr('d', linkShape({ source, target: source, staticWidth: true }))
+            .attr('d', d => linkShape({ source, target, staticWidth: !!d.source.parent }))
             .remove();
         },
       );
     _transition(path)
       .attr('stroke', d => getColor(d.target.data))
       .attr('stroke-width', d => linkWidth(d.target))
-      .attr('fill', d => d.source.parent ? 'none': getColor(d.target.data)  )
+      .style('fill', d => d.source.parent ? 'none': getColor(d.target.data)  )
+      .style('opacity', 1)
       .attr('d', d => {
         const source = [
           SWITCH_CONST == 1 ? d.source.y + d.source.ySizeInner : d.source.y,
