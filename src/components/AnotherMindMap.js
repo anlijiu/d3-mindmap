@@ -585,7 +585,7 @@ ${getStyleContent()}
         // width={width + margin.left + margin.right}
         // height={height + margin.top + margin.bottom}
   return (
-    <div>
+    <div style={{height: '640px'}}>
       <div ref={invisible} className={`${idRef.current}-container ${idRef.current}-fo`}>
       </div>
       <svg
