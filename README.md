@@ -1,6 +1,7 @@
 # d3 mindmap
 left right mindmap tree
 
+![Screenshot](../assets/screenshot.png?raw=true)
 
 - 👉 [markmap](https://github.com/gera2ld/markmap).
 - 👉 [bezierjs](https://github.com/Pomax/bezierjs).
