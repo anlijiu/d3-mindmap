@@ -90,6 +90,7 @@ const AnotherMindMap = ({ data, color, layout, fontsLoaded }) => {
   const rootData = useMemo(() => {
     const tokens = md.parse(data || '', {});
     let root = buildTree(tokens, md)
+    console.log("root is ", root)
     cleanNode(root);
     if (root.children?.length === 1) root = root.children[0];
     if(layout === 'right') {
@@ -586,8 +587,10 @@ ${getStyleContent()}
         // height={height + margin.top + margin.bottom}
   return (
     <div style={{height: '640px'}}>
-      <div ref={invisible} className={`${idRef.current}-container ${idRef.current}-fo`}>
-      </div>
+      <template shado-root={"close"}>
+        <div ref={invisible} className={`${idRef.current}-container ${idRef.current}-fo`}>
+        </div>
+      </template>
       <svg
         width='100%'
         height='100%'
